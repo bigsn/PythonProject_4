@@ -1,0 +1,22 @@
+# Override для локальной разработки с hot-reload
+
+services:
+  api:
+    volumes:
+      - ./src:/app/src
+      - ./celery_worker.py:/app/celery_worker.py
+      - ./.env:/app/.env
+    command: ["uv", "run", "uvicorn", "pythonproject_4.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  celery-worker:
+    volumes:
+      - ./src:/app/src
+      - ./celery_worker.py:/app/celery_worker.py
+      - ./session:/app/session
+    command: ["uv", "run", "python", "celery_worker.py", "worker", "--loglevel=info", "--concurrency=4"]
+
+  celery-beat:
+    volumes:
+      - ./src:/app/src
+      - ./celery_worker.py:/app/celery_worker.py
+    command: ["uv", "run", "python", "celery_worker.py", "beat", "--loglevel=info", "--schedule", "/tmp/celerybeat-schedule"]

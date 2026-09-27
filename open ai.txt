@@ -1,0 +1,7 @@
+openai   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
+
+Allowed models:
+gpt-5-nano-2025-08-07
+gpt-5-nano
+gpt-5.6-luna
+gpt-6-luna

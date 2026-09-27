@@ -1,0 +1,119 @@
+
+services:
+  # PostgreSQL база данных
+  postgres:
+    image: postgres:16-alpine
+    container_name: ainews-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ainews}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ainews_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-ainews}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ainews}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ainews-network
+
+  # Redis брокер для Celery
+  redis:
+    image: redis:7-alpine
+    container_name: ainews-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ainews-network
+
+  # Celery worker — обработка задач
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ainews-celery-worker
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-ainews}:${POSTGRES_PASSWORD:-ainews_pass}@postgres:5432/${POSTGRES_DB:-ainews}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - telethon_session:/app/session
+    command: ["/app/.venv/bin/python", "celery_worker.py", "worker", "--loglevel=info", "--concurrency=4"]
+    networks:
+      - ainews-network
+
+  # Celery beat — расписание задач (сбор каждые 30 мин, публикация HH:00 и HH:30)
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ainews-celery-beat
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-ainews}:${POSTGRES_PASSWORD:-ainews_pass}@postgres:5432/${POSTGRES_DB:-ainews}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: ["/app/.venv/bin/python", "celery_worker.py", "beat", "--loglevel=info", "--schedule", "/tmp/celerybeat-schedule"]
+    networks:
+      - ainews-network
+
+  # FastAPI приложение
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ainews-api
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-ainews}:${POSTGRES_PASSWORD:-ainews_pass}@postgres:5432/${POSTGRES_DB:-ainews}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - telethon_session:/app/session
+    command: ["/app/.venv/bin/uvicorn", "pythonproject_4.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    networks:
+      - ainews-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  telethon_session:
+
+networks:
+  ainews-network:
+    driver: bridge
