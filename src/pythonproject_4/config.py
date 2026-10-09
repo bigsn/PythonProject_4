@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # OpenAI
     OPENAI_API_KEY: str = "default_key"
     OPENAI_MODEL: str = "gpt-4"
-    PROXY: str = 'https://openai.javarush.com/v1 '
+    PROXY: str = ''
 
     # Telegram
     TELEGRAM_API_ID: int = 0

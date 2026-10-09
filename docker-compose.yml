@@ -54,7 +54,10 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - .:/app
+      - ./src:/app/src
+      - ./celery_worker.py:/app/celery_worker.py
+      - ./.env:/app/.env
+      - ./README.md:/app/README.md
       - telethon_session:/app/session
     command: ["/app/.venv/bin/python", "celery_worker.py", "worker", "--loglevel=info", "--concurrency=4"]
     networks:
@@ -78,7 +81,10 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - .:/app
+      - ./src:/app/src
+      - ./celery_worker.py:/app/celery_worker.py
+      - ./.env:/app/.env
+      - ./README.md:/app/README.md
     command: ["/app/.venv/bin/python", "celery_worker.py", "beat", "--loglevel=info", "--schedule", "/tmp/celerybeat-schedule"]
     networks:
       - ainews-network
@@ -103,7 +109,10 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - .:/app
+      - ./src:/app/src
+      - ./celery_worker.py:/app/celery_worker.py
+      - ./.env:/app/.env
+      - ./README.md:/app/README.md
       - telethon_session:/app/session
     command: ["/app/.venv/bin/uvicorn", "pythonproject_4.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     networks:

@@ -18,13 +18,15 @@ COPY celery_worker.py ./
 COPY README.md .
 
 # Установить зависимости Python
-#RUN uv sync
+RUN uv sync
 
 # Создать директорию для сессии Telethon
 RUN mkdir -p /app/session
 
 # Создать пользователя для запуска (без root)
 RUN useradd -m appuser
+# Дать права appuser на .venv
+RUN chown -R appuser:appuser /app/.venv
 USER appuser
 
 # Команда по умолчанию — запуск Celery worker
