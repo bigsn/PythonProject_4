@@ -55,7 +55,7 @@ class NewsItem(Base):
     url = Column(String, nullable=True)  # null for Telegram
     telegram_channel_id = Column(Integer, nullable=True)  # null for site
     telegram_message_id = Column(Integer, nullable=True)  # null for site
-    summary = Column(String, nullable=True)
+    img_url = Column(String, nullable=True)
     raw_text = Column(Text, nullable=False)
     source_id = Column(Integer, ForeignKey("sources.id"), nullable=False)
     published_at = Column(DateTime(timezone=True), nullable=True)

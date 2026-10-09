@@ -14,8 +14,9 @@ class ParsedNews:
     url: Optional[str] = None  # for sites
     telegram_channel_id: Optional[int] = None  # for Telegram
     telegram_message_id: Optional[int] = None  # for Telegram
-    summary: Optional[str] = None
-    published_at: Optional[datetime] = None
+    img_url: Optional[str] = None
+    author: Optional[str] = None
+    published_at: Optional[str] = None
 
 
 class BaseParser(ABC):

@@ -18,7 +18,7 @@ COPY celery_worker.py ./
 COPY README.md .
 
 # Установить зависимости Python
-RUN uv sync
+#RUN uv sync
 
 # Создать директорию для сессии Telethon
 RUN mkdir -p /app/session

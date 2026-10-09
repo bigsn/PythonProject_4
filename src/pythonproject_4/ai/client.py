@@ -11,7 +11,7 @@ def get_openai_client():
     global _settings
     if _settings is None:
         _settings = get_settings()
-    return openai.AsyncOpenAI(api_key=_settings.OPENAI_API_KEY)
+    return openai.AsyncOpenAI(api_key=_settings.OPENAI_API_KEY, base_url=_settings.PROXY)
 
 
 async def generate_post(text: str) -> str:
@@ -31,8 +31,8 @@ async def generate_post(text: str) -> str:
             {"role": "system", "content": "You are a professional Telegram content creator."},
             {"role": "user", "content": prompt},
         ],
-        temperature=0.7,
-        max_tokens=500,
+        temperature=1,
+        max_completion_tokens=500,
     )
 
     generated = response.choices[0].message.content.strip()

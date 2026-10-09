@@ -88,7 +88,7 @@ def collect_news_from_source(self, source_id: int):
                 url=parsed.url,
                 telegram_channel_id=parsed.telegram_channel_id,
                 telegram_message_id=parsed.telegram_message_id,
-                summary=parsed.summary,
+                img_url=parsed.img_url,
                 raw_text=parsed.raw_text,
                 source_id=source.id,
                 published_at=parsed.published_at,
@@ -155,15 +155,12 @@ def trigger_generation(self, news_item_id: UUID):
         logger.info(f"Created Post {post.id} for news {news_item_id}")
 
         # Async generation
-        async def _do_generate():
-            generated_text = await generate_post_for_news(news_item)
-            post.generated_text = generated_text
-            post.generated_at = datetime.now(timezone.utc)
-            post.status = "generated"
-            db.commit()
-            logger.info(f"Successfully generated post {post.id}")
-
-        asyncio.get_event_loop().run_until_complete(_do_generate())
+        generated_text = asyncio.run(generate_post_for_news(news_item))
+        post.generated_text = generated_text
+        post.generated_at = datetime.now(timezone.utc)
+        post.status = "generated"
+        db.commit()
+        logger.info(f"Successfully generated post {post.id}")
 
     except Exception as exc:
         db.rollback()
@@ -218,7 +215,7 @@ def _do_publish(db: Session, post: Post) -> None:
     try:
         client = get_telegram_client()
         settings = __import__("pythonproject_4.config", fromlist=["get_settings"]).get_settings()
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(
             publish_post(client, settings.TELEGRAM_TARGET_CHANNEL, post.generated_text)
         )
         post.status = "published"
