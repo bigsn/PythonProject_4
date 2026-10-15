@@ -2,19 +2,21 @@
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 from uuid import UUID
 
 from celery import shared_task
 from sqlalchemy.orm import Session
+from telethon import TelegramClient, connection
 
 from pythonproject_4.db import SessionLocal
 from pythonproject_4.models import Source, NewsItem, Post
 from pythonproject_4.news_parser.telegram import TelegramNewsParser
 from pythonproject_4.news_parser.sites import get_parser_for_url
 from pythonproject_4.ai.generator import generate_post_for_news
-from pythonproject_4.telegram.publisher import publish_post
 from pythonproject_4.telegram.client import get_telegram_client
+from pythonproject_4.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -213,11 +215,35 @@ def _do_publish(db: Session, post: Post) -> None:
         return
 
     try:
+        settings = get_settings()
         client = get_telegram_client()
-        settings = __import__("pythonproject_4.config", fromlist=["get_settings"]).get_settings()
-        asyncio.run(
-            publish_post(client, settings.TELEGRAM_TARGET_CHANNEL, post.generated_text)
-        )
+        
+        # Start client if not connected (sync)
+        if not client.is_connected():
+            session_file = "session.session"
+            if os.path.exists(session_file):
+                with open(session_file, 'r', encoding='utf-8') as f:
+                    session_string = f.read().strip()
+                if session_string:
+                    client.start(session_string)
+            else:
+                client.start()
+        
+        # Run async publish in the SAME event loop the client is using
+        def _publish():
+            async def _async_publish():
+                channel = settings.TELEGRAM_TARGET_CHANNEL
+                try:
+                    channel = int(channel)
+                except ValueError:
+                    pass  # строка типа "@NewsAI"
+                entity = await client.get_entity(channel)
+                await client.send_message(entity, post.generated_text)
+            
+            client.loop.run_until_complete(_async_publish())
+        
+        _publish()
+
         post.status = "published"
         post.published_at = datetime.now(timezone.utc)
         db.commit()
@@ -233,6 +259,7 @@ def _do_publish(db: Session, post: Post) -> None:
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def publish_post_manual(self, post_id: int):
     """Manual publication trigger via API."""
+    logger.info(f"Manual publication requested for post {post_id}")
     db = _get_db()
     try:
         post = db.query(Post).filter(Post.id == post_id).first()

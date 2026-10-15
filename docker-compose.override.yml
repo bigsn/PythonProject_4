@@ -12,7 +12,7 @@ services:
     volumes:
       - ./src:/app/src
       - ./celery_worker.py:/app/celery_worker.py
-      - ./session:/app/session
+      - ./session.session:/app/session.session
     command: ["uv", "run", "python", "celery_worker.py", "worker", "--loglevel=info", "--concurrency=4"]
 
   celery-beat:

@@ -8,4 +8,6 @@ from pythonproject_4.config import get_settings
 async def publish_post(client: TelegramClient, target_channel: str, text: str) -> None:
     """Send a post to the target Telegram channel."""
     entity = await client.get_entity(target_channel)
+    print(entity)
     await client.send_message(entity, text)
+

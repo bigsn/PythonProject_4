@@ -58,7 +58,7 @@ services:
       - ./celery_worker.py:/app/celery_worker.py
       - ./.env:/app/.env
       - ./README.md:/app/README.md
-      - telethon_session:/app/session
+      - ./session.session:/app/session.session
     command: ["/app/.venv/bin/python", "celery_worker.py", "worker", "--loglevel=info", "--concurrency=4"]
     networks:
       - ainews-network
@@ -85,6 +85,7 @@ services:
       - ./celery_worker.py:/app/celery_worker.py
       - ./.env:/app/.env
       - ./README.md:/app/README.md
+      - ./session.session:/app/session.session
     command: ["/app/.venv/bin/python", "celery_worker.py", "beat", "--loglevel=info", "--schedule", "/tmp/celerybeat-schedule"]
     networks:
       - ainews-network
@@ -113,7 +114,7 @@ services:
       - ./celery_worker.py:/app/celery_worker.py
       - ./.env:/app/.env
       - ./README.md:/app/README.md
-      - telethon_session:/app/session
+      - ./session.session:/app/session.session
     command: ["/app/.venv/bin/uvicorn", "pythonproject_4.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     networks:
       - ainews-network
@@ -121,7 +122,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  telethon_session:
 
 networks:
   ainews-network:

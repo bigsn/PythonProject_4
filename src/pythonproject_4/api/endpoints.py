@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 
+from watchfiles import awatch
+
 from pythonproject_4.db import get_db
 from pythonproject_4.models import Source, NewsItem, Post
 from pythonproject_4.schemas import (
@@ -27,14 +29,14 @@ router = APIRouter(prefix="/api")
 # --- Source endpoints ---
 
 @router.get("/sources/", response_model=list[SourceResponse])
-def list_sources(db: Session = Depends(get_db)):
+async def list_sources(db: Session = Depends(get_db)):
     """List all news sources."""
     sources = db.query(Source).all()
     return sources
 
 
 @router.post("/sources/", response_model=SourceResponse, status_code=status.HTTP_201_CREATED)
-def create_source(source_data: SourceCreate, db: Session = Depends(get_db)):
+async def create_source(source_data: SourceCreate, db: Session = Depends(get_db)):
     """Create a new news source."""
     # Validate URL format based on type
     if source_data.type == "telegram":
@@ -60,7 +62,7 @@ def create_source(source_data: SourceCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/sources/{source_id}/", response_model=SourceResponse)
-def get_source(source_id: int, db: Session = Depends(get_db)):
+async def get_source(source_id: int, db: Session = Depends(get_db)):
     """Get a source by ID."""
     source = db.query(Source).filter(Source.id == source_id).first()
     if not source:
@@ -69,7 +71,7 @@ def get_source(source_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/sources/{source_id}/", response_model=SourceResponse)
-def update_source(source_id: int, source_data: SourceUpdate, db: Session = Depends(get_db)):
+async def update_source(source_id: int, source_data: SourceUpdate, db: Session = Depends(get_db)):
     """Update a source (including enabled status)."""
     source = db.query(Source).filter(Source.id == source_id).first()
     if not source:
@@ -85,7 +87,7 @@ def update_source(source_id: int, source_data: SourceUpdate, db: Session = Depen
 
 
 @router.delete("/sources/{source_id}/", status_code=status.HTTP_204_NO_CONTENT)
-def delete_source(source_id: int, db: Session = Depends(get_db)):
+async def delete_source(source_id: int, db: Session = Depends(get_db)):
     """Delete a source (only if no news items exist)."""
     source = db.query(Source).filter(Source.id == source_id).first()
     if not source:
@@ -104,7 +106,7 @@ def delete_source(source_id: int, db: Session = Depends(get_db)):
 # --- News endpoints ---
 
 @router.get("/news/", response_model=list[NewsItemResponse])
-def list_news(db: Session = Depends(get_db)):
+async def list_news(db: Session = Depends(get_db)):
     """List all collected news items."""
     news = db.query(NewsItem).all()
     return news
@@ -113,14 +115,14 @@ def list_news(db: Session = Depends(get_db)):
 # --- Post endpoints ---
 
 @router.get("/posts/", response_model=list[PostResponse])
-def list_posts(db: Session = Depends(get_db)):
+async def list_posts(db: Session = Depends(get_db)):
     """List all posts with their status."""
     posts = db.query(Post).all()
     return posts
 
 
 @router.get("/posts/{post_id}/", response_model=PostResponse)
-def get_post(post_id: int, db: Session = Depends(get_db)):
+async def get_post(post_id: int, db: Session = Depends(get_db)):
     """Get a post by ID with generated text and status."""
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
@@ -129,14 +131,14 @@ def get_post(post_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/parse/", status_code=status.HTTP_202_ACCEPTED)
-def trigger_parse():
+async def trigger_parse():
     """Manually trigger news collection from all enabled sources."""
     task = collect_all_enabled_sources.delay()
     return {"task_id": task.id}
 
 
 @router.post("/generate/", status_code=status.HTTP_202_ACCEPTED)
-def trigger_generate(request: GenerateRequest, db: Session = Depends(get_db)):
+async def trigger_generate(request: GenerateRequest, db: Session = Depends(get_db)):
     """Manually generate AI post for a news item."""
     news_item = db.query(NewsItem).filter(NewsItem.id == request.news_id).first()
     if not news_item:
@@ -157,7 +159,7 @@ def trigger_generate(request: GenerateRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/posts/{post_id}/publish/", response_model=dict)
-def trigger_publish(post_id: int, db: Session = Depends(get_db)):
+async def trigger_publish(post_id: int, db: Session = Depends(get_db)):
     """Manually publish a post."""
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
