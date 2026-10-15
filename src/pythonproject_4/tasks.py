@@ -15,7 +15,6 @@ from pythonproject_4.models import Source, NewsItem, Post
 from pythonproject_4.news_parser.telegram import TelegramNewsParser
 from pythonproject_4.news_parser.sites import get_parser_for_url
 from pythonproject_4.ai.generator import generate_post_for_news
-from pythonproject_4.telegram.client import get_telegram_client
 from pythonproject_4.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -216,33 +215,43 @@ def _do_publish(db: Session, post: Post) -> None:
 
     try:
         settings = get_settings()
-        client = get_telegram_client()
-        
-        # Start client if not connected (sync)
-        if not client.is_connected():
+
+        # Create NEW client for each publication (no singleton)
+        async def _publish_all():
+            from telethon.sessions import StringSession
+            
             session_file = "session.session"
+            session = StringSession()
+            session_string = None
             if os.path.exists(session_file):
                 with open(session_file, 'r', encoding='utf-8') as f:
                     session_string = f.read().strip()
                 if session_string:
-                    client.start(session_string)
-            else:
-                client.start()
-        
-        # Run async publish in the SAME event loop the client is using
-        def _publish():
-            async def _async_publish():
-                channel = settings.TELEGRAM_TARGET_CHANNEL
-                try:
-                    channel = int(channel)
-                except ValueError:
-                    pass  # строка типа "@NewsAI"
-                entity = await client.get_entity(channel)
-                await client.send_message(entity, post.generated_text)
+                    session = StringSession(session_string)
             
-            client.loop.run_until_complete(_async_publish())
-        
-        _publish()
+            client = TelegramClient(
+                session,
+                settings.TELEGRAM_API_ID,
+                settings.TELEGRAM_API_HASH,
+                connection=connection.ConnectionTcpMTProxyRandomizedIntermediate,
+                proxy=('a09.mtjlpoto.fit', 443, 'eebf7996394f73fa1002a1a074aa22f717786170692e6f7a6f6e2e7275')
+            )
+            
+            if session_string:
+                await client.start(session_string)
+            else:
+                await client.start()
+            
+            channel = settings.TELEGRAM_TARGET_CHANNEL
+            try:
+                channel = int(channel)
+            except ValueError:
+                pass
+            entity = await client.get_entity(channel)
+            await client.send_message(entity, post.generated_text)
+            await client.disconnect()
+
+        asyncio.run(_publish_all())
 
         post.status = "published"
         post.published_at = datetime.now(timezone.utc)

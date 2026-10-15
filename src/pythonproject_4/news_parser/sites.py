@@ -33,7 +33,16 @@ class HabrParser(BaseParser):
             title = item.title.text
             url = item.guid.text
             author = item.creator.text
-            img = BeautifulSoup(item.description.text, "html.parser").img['src']
+            
+            # Extract image safely
+            img = ""
+            try:
+                soup = BeautifulSoup(item.description.text, "html.parser")
+                img_tag = soup.find('img')
+                if img_tag:
+                    img = img_tag.get('src', '')
+            except Exception:
+                pass
 
             response = requests.get(item.guid.text)
             if response.status_code == 200:

@@ -1,17 +1,53 @@
-# 1. Настроить окружение
-cp .env.example .env
-# Заполнить .env (OPENAI_API_KEY, TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_TARGET_CHANNEL)
+# AINEWS - Основные команды
 
-# 2. Запустить все сервисы
+# 1. Создание StringSession для Telegram
+cd D:\Python\PythonProject_4
+.venv\Scripts\python.exe create_session.py
+
+# 2. Запуск через Docker (рекомендуется)
 docker-compose up -d
 
-# 3. Посмотреть логи
+# 3. Просмотр логов
 docker-compose logs -f api
 docker-compose logs -f celery-worker
 docker-compose logs -f celery-beat
 
-# 4. Остановить
+# 4. Пересборка и перезапуск
+docker-compose build celery-worker celery-beat api
+docker-compose up -d celery-worker celery-beat api
+
+# 5. Остановка
 docker-compose down
 
-# 5. Остановить и удалить volumes (удалит данные)
+# 6. Остановка с удалением volumes
 docker-compose down -v
+
+# 7. Тестирование публикации
+curl.exe -X POST http://localhost:8000/api/posts/{id}/publish/
+
+# 8. Проверка статусов постов
+curl.exe http://localhost:8000/api/posts/
+
+# 9. Отключение источника (вместо удаления)
+curl.exe -X PATCH http://localhost:8000/api/sources/{id}/ -H "Content-Type: application/json" -d "{\"enabled\": false}"
+
+# 10. Локальный запуск (без Docker)
+docker run --name ainews-db -e POSTGRES_USER=ainews -e POSTGRES_PASSWORD=ainews_pass -e POSTGRES_DB=ainews -p 5432:5432 -d postgres:16-alpine
+docker run --name ainews-redis -p 6379:6379 -d redis:7-alpine
+uv run python -c "from pythonproject_4.db import init_db; init_db()"
+
+# Терминал 1:
+uv run uvicorn pythonproject_4.main:app --reload --port 8000
+
+# Терминал 2:
+uv run python celery_worker.py worker --loglevel=info
+
+# Терминал 3:
+uv run python celery_worker.py beat --loglevel=info --schedule /tmp/celerybeat-schedule
+
+# 11. Предотвращение сна Windows (пока запущен проект)
+powercfg -request DISPLAY ALWAYS SYSTEM AWAYMODE
+
+# 12. Создание задачи для предотвращения сна
+schtasks /create /tn PreventSleep /tr "ping.exe 127.0.0.1 -n 1 -w 60000" /sc minute /mo 5 /rl HIGHEST
+schtasks /run /tn PreventSleep
