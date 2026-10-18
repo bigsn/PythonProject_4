@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Boolean,
+    BigInteger,
     Column,
     DateTime,
     ForeignKey,
@@ -53,8 +54,8 @@ class NewsItem(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String, nullable=False)
     url = Column(String, nullable=True)  # null for Telegram
-    telegram_channel_id = Column(Integer, nullable=True)  # null for site
-    telegram_message_id = Column(Integer, nullable=True)  # null for site
+    telegram_channel_id = Column(BigInteger, nullable=True)  # null for site
+    telegram_message_id = Column(BigInteger, nullable=True)  # null for site
     img_url = Column(String, nullable=True)
     raw_text = Column(Text, nullable=False)
     source_id = Column(Integer, ForeignKey("sources.id"), nullable=False)
