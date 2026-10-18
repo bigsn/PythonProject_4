@@ -12,3 +12,4 @@ build/
 .eggs/
 *.log
 celerybeat-schedule
+.idea
