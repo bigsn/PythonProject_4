@@ -83,7 +83,7 @@ uv run python -c "from pythonproject_4.db import init_db; init_db()"
 #### 4.3. Авторизация в Telegram
 
 ```bash
-uv run python -m pythonproject_4.telegram.authorize
+uv run python -m create_session.py
 # Введите номер телефона и код подтверждения
 ```
 
